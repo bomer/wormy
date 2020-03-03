@@ -7,21 +7,24 @@
 	<meta name="mobile-web-app-capable" content="yes">
 	<link rel="shortcut icon" href="favicon.ico">
 	<link rel="apple-touch-icon" href="meta/apple-touch-icon.png">
+	<link href="https://fonts.googleapis.com/css?family=Spartan:100&display=swap" rel="stylesheet">
 	<meta name="apple-mobile-web-app-status-bar-style" content="black">
 	<meta name="HandheldFriendly" content="True">
 	<meta name="MobileOptimized" content="720">
 	<meta name="viewport" content="width=device-width, target-densitydpi=300dpi, initial-scale=1.0, maximum-scale=1, user-scalable=no, minimal-ui">
 	<meta name="format-detection" content="telephone=no" />
-	<title>Game Name</title>
+	<title>Wormy</title>
 
 	<style>
 		html,body{
 			margin:0;
+			overflow: hidden;
 		}
 		#canvas-container {
 			width: 100%;
 			text-align:center;
-		}
+		}		
+
 	</style>
 </head>
 
@@ -37,21 +40,39 @@ var mobileRatio = 9/16;
 var height = window.innerHeight;
 var width=window.innerWidth;// / (16/9);
 
+var score=0;
 var player={};
 var gravity=.91/2;
 var keymovepower=0.55;
 var friction = 0.95;
 var h=[];
+var keys = [];
+var debug = false;
+
+//new vars for game
+var goodspot = {} 
+var counterIncrement=1.5;
+var countdown=10.0;
 
 function init() {
+	generateNewSpot();
 	canvas.width  = width
 	canvas.height = height;
 	canvas.imageSmoothingEnabled = true;
+
+	//Base variables to reset
+	keymovepower=0.55;
+	score=0;
 
 	player.x=width/2; //Init player
 	player.y=80;
 	player.xspeed=0;
 	player.yspeed=0;
+	player.size=10;
+	player.dead=false;
+	countdown=10.0;
+	//This game defaults to going down.
+	keys[40]=true;
 }
 
 function drawGame(){
@@ -62,6 +83,27 @@ function drawGame(){
 	for (var i = 0; i < h.length; i++) {
 		drawPlayer(h[i]);
 	}
+	//Draw the good zone
+	ctx.beginPath();
+	ctx.fillStyle=goodspot.color;
+	ctx.arc(goodspot.x - goodspot.size/2,goodspot.y - goodspot.size/2 ,goodspot.size ,0,2*Math.PI);	
+	ctx.fill();
+
+	//Draw the countdown
+	ctx.font = "90px " + "'Spartan'";
+	ctx.textAlign="center";
+	ctx.fillStyle="black";
+	ctx.fillText(countdown.toFixed(1) ,width/2 ,100);
+	ctx.fillText(score,width/8 ,100);
+
+	//debugging
+	if(debug){
+		ctx.fillStyle="red";
+		ctx.fillRect(player.x,player.y,50,50);
+		ctx.fillRect(goodspot.x-goodspot.x/goodspot.size,goodspot.y,50,50);
+
+	}
+	requestAnimationFrame(drawGame);
 	
 
 }
@@ -69,15 +111,30 @@ function drawGame(){
 function drawPlayer(p) {
 	var ctx = canvas.getContext("2d");
 	ctx.beginPath();
-	ctx.arc(p.x,p.y,19 * mobileRatio,0,2*Math.PI);
+	ctx.fillStyle="black";
+	ctx.arc(p.x - player.size/2,p.y-player.size/2, player.size ,0,2*Math.PI);
 	ctx.stroke();
 	ctx.fill();
 }
 
+function generateNewSpot(){
+	goodspot = {
+		x:Math.random()*width,
+		y:Math.random()*height,
+		size:45,
+		color:"rgba(0,200,0,0.5)"
+	}
+}
+
 function updateGame(){
+
+	//Countdown timer
+	countdown -= ONE_FRAME_TIME/1000.0;
 	//Gravity + movement 
 
-	// player.yspeed+=gravity;
+	if(countdown <= 0)
+		player.dead=true;
+
 	if (player.jumpCountdown!=0)
 		player.jumpCountdown--;
 	//Calculate key movement for old school keyboards.
@@ -88,49 +145,84 @@ function updateGame(){
 
 	if (keys[38])	//up arrow
 		player.yspeed-=keymovepower;
-	if (keys[40])	//Right arrow
+	if (keys[40])	//down arrow
 		player.yspeed+=keymovepower;
 
-	//Calculate gyro into player pos
+	//Apply friction to player
 	player.xspeed*=friction;
 	player.yspeed*=friction;
 	//floor
 	if (player.y>=height){
 		player.yspeed*=-1;
+		player.dead=true;
 	}
 	if (player.y<0){
 		player.yspeed*=-1;
+		player.dead=true;
 	}
 	//Update player pos
 	player.x+=player.xspeed;
 	player.y+=player.yspeed;
 
-	if (player.x<0)
+	if (player.x<0){
 		player.xspeed*=-1;
-	if (player.x>width)
+		player.dead=true;
+	}
+	if (player.x>width){
 		player.xspeed*=-1;
+		player.dead=true;
+	}
+
+	//
+	//Hit detection for goodspotnm
+	var xdif=player.x-goodspot.x;
+	var ydif=player.y-goodspot.y;
 	
-	if (player.dead)
+	if(xdif>= -goodspot.size && xdif<=goodspot.size){
+		if(ydif>= -goodspot.size && ydif<=goodspot.size){
+			countdown+=counterIncrement;
+			generateNewSpot();
+			keymovepower+=0.05;
+			score++;
+		}
+	}
+	
+	if (player.dead){
 		init()	
+	}
+	//Cleanup tail
 	h.push({x:player.x,y:player.y});
-	if(h.length >= 60){
+	if(h.length >= keymovepower*100){
 		h.shift();
 	}
 }
 
-init()
- 
-var keys = [];
-window.onkeyup = function(e) {keys[e.keyCode]=false;}
-window.onkeydown = function(e) {keys[e.keyCode]=true;}
 
-//Game Loop
+
+
+window.onkeyup = function(e) {
+	//Disabled and set to always leave last input going at once.
+	//keys[e.keyCode]=false;
+}
+window.onkeydown = function(e) {
+	keys[37]=false;
+	keys[38]=false;
+	keys[39]=false;
+	keys[40]=false;
+	keys[e.keyCode]=true;
+}
+
+//Game Loop Logic
+init();
 var ONE_FRAME_TIME = 1000 / 60 ;
+//Sync game logic to 60fps
 var mainloop = function() {
 	updateGame();
-	drawGame();
 };
 setInterval( mainloop, ONE_FRAME_TIME );
+
+//Drawgame at monitor res + smoother timeframes
+requestAnimationFrame(drawGame);
 
 </script>
 </body>
