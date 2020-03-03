@@ -41,6 +41,7 @@ var height = window.innerHeight;
 var width=window.innerWidth;// / (16/9);
 
 var score=0;
+
 var player={};
 var gravity=.91/2;
 var keymovepower=0.55;
@@ -63,6 +64,9 @@ function init() {
 	//Base variables to reset
 	keymovepower=0.55;
 	score=0;
+	if(!localStorage.highscoreWormy){
+		localStorage.highscoreWormy = 0;
+	}
 
 	player.x=width/2; //Init player
 	player.y=80;
@@ -95,6 +99,7 @@ function drawGame(){
 	ctx.fillStyle="black";
 	ctx.fillText(countdown.toFixed(1) ,width/2 ,100);
 	ctx.fillText(score,width/8 ,100);
+	ctx.fillText(localStorage.highscoreWormy,width-width/8 ,100);
 
 	//debugging
 	if(debug){
@@ -188,6 +193,8 @@ function updateGame(){
 	}
 	
 	if (player.dead){
+		if(score > localStorage.highscoreWormy)
+			localStorage.highscoreWormy=score;
 		init()	
 	}
 	//Cleanup tail
