@@ -205,7 +205,10 @@ function updateGame(){
 		if(ydif>= -goodspot.size && ydif<=goodspot.size){
 			countdown+=counterIncrement;
 			generateNewSpot();
-			keymovepower+=0.05;
+			if(isMobile)
+				keymovepower+=0.025;
+			else
+				keymovepower+=0.05;
 			score++;
 		}
 	}
