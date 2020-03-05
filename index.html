@@ -92,7 +92,7 @@ function init() {
 		keys[40]=true;
 	}else{
 		//Scale game down for phone.
-		keymovepower = keymovepower/2;
+		keymovepower = 0.225;
 		player.size=5;
 		fontsize=45;
 		// joystick.is
@@ -212,7 +212,7 @@ function updateGame(){
 			countdown+=counterIncrement;
 			generateNewSpot();
 			if(isMobile)
-				keymovepower+=0.025;
+				keymovepower+=0.015;
 			else
 				keymovepower+=0.05;
 			score++;
