@@ -1,4 +1,4 @@
-<!doctype html>
+	<!doctype html>
 <html>
 <head>
 	<meta charset="UTF-8">
@@ -6,8 +6,11 @@
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="mobile-web-app-capable" content="yes">
 	<link rel="shortcut icon" href="favicon.ico">
+
 	<link rel="apple-touch-icon" href="meta/apple-touch-icon.png">
 	<link href="https://fonts.googleapis.com/css?family=Spartan:100&display=swap" rel="stylesheet">
+	<script src="virtualjoystick.js"></script> 
+
 	<meta name="apple-mobile-web-app-status-bar-style" content="black">
 	<meta name="HandheldFriendly" content="True">
 	<meta name="MobileOptimized" content="720">
@@ -54,6 +57,9 @@ var debug = false;
 var goodspot = {} 
 var counterIncrement=1.5;
 var countdown=10.0;
+var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+var fontsize=90;
+
 
 function init() {
 	generateNewSpot();
@@ -76,7 +82,15 @@ function init() {
 	player.dead=false;
 	countdown=10.0;
 	//This game defaults to going down.
-	keys[40]=true;
+	if(!isMobile){
+		keys[40]=true;
+	}else{
+		//Scale game down for phone.
+		keymovepower = keymovepower/2;
+		player.size=5;
+		fontsize=45;
+		// joystick.is
+	}
 }
 
 function drawGame(){
@@ -94,7 +108,7 @@ function drawGame(){
 	ctx.fill();
 
 	//Draw the countdown
-	ctx.font = "90px " + "'Spartan'";
+	ctx.font = fontsize +"px " + "'Spartan'";
 	ctx.textAlign="center";
 	ctx.fillStyle="black";
 	ctx.fillText(countdown.toFixed(1) ,width/2 ,100);
@@ -124,14 +138,18 @@ function drawPlayer(p) {
 
 function generateNewSpot(){
 	goodspot = {
-		x:Math.random()*width,
-		y:Math.random()*height,
+		x:(Math.random()*width*0.9) + (Math.random()*width*0.05) , // 90% of screen space, always 5% across.
+		y:(Math.random()*height*0.9)  + (Math.random()*height*0.05) ,
 		size:45,
 		color:"rgba(0,200,0,0.5)"
 	}
+	if(isMobile)
+		goodspot.size /= 2;
 }
 
 function updateGame(){
+
+
 
 	//Countdown timer
 	countdown -= ONE_FRAME_TIME/1000.0;
@@ -143,14 +161,14 @@ function updateGame(){
 	if (player.jumpCountdown!=0)
 		player.jumpCountdown--;
 	//Calculate key movement for old school keyboards.
-	if (keys[37])	//Left arrow
+	if (keys[37] || joystick.left() )	//Left arrow
 		player.xspeed-=keymovepower;
-	if (keys[39])	//Right arrow
+	if (keys[39] || joystick.right())	//Right arrow
 		player.xspeed+=keymovepower;
 
-	if (keys[38])	//up arrow
+	if (keys[38] || joystick.up())	//up arrow
 		player.yspeed-=keymovepower;
-	if (keys[40])	//down arrow
+	if (keys[40] || joystick.down())	//down arrow
 		player.yspeed+=keymovepower;
 
 	//Apply friction to player
@@ -219,8 +237,16 @@ window.onkeydown = function(e) {
 	keys[e.keyCode]=true;
 }
 
-//Game Loop Logic
+
+var joystick = new VirtualJoystick({
+	mouseSupport	: true,
+	limitStickTravel: true,
+	stickRadius	: 50
+});
+
 init();
+
+//Game Loop Logic
 var ONE_FRAME_TIME = 1000 / 60 ;
 //Sync game logic to 60fps
 var mainloop = function() {
